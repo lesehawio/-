@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>بازی مافیا - تقسیم نقش‌ها</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #000; /* سیاه */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #FD3131;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px #FD3131;
+    }
+    #player-form {
+      background: rgba(255 255 255 / 0.05);
+      border: 2px solid #FD3131;
+      border-radius: 20px;
+      padding: 20px 30px;
+      box-shadow: 0 0 15px #FD3131;
+      width: 320px;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+    #player-form label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    #player-form input[type="text"],
+    #player-form input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid #FD3131;
+      background-color: #000;
+      color: #FD3131;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    #player-form button {
+      background-color: #FD3131;
+      color: #000;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 0 15px #FD3131;
+    }
+    #players-list {
+      margin-bottom: 10px;
+      font-weight: 600;
+      text-align: center;
+      color: #f55;
+      min-height: 24px;
+    }
+    #cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+    .card {
+      width: 140px;
+      height: 180px;
+      background-color: #000;
+      border: 2px solid #FD3131;
+      border-radius: 16px;
+      box-shadow: 0 0 12px #FD3131;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      color: #FD3131;
+      font-weight: 700;
+      font-size: 1.2rem;
+      text-align: center;
+      padding: 15px;
+    }
+    .card.locked {
+      background-color: #330a0a;
+      box-shadow: 0 0 20px #aa2222 inset;
+      cursor: default;
+    }
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #111;
+      border: 2px solid #FD3131;
+      border-radius: 16px;
+      padding: 30px 20px;
+      box-shadow: 0 0 30px #FD3131;
+      z-index: 999;
+      max-width: 80vw;
+      color: #FF9999;
+      text-align: center;
+    }
+    .modal h2 {
+      color: #FD3131;
+      margin-bottom: 10px;
+    }
+    .modal p {
+      font-size: 0.95rem;
+      margin: 10px 0 20px;
+    }
+    .modal button {
+      background-color: #FD3131;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #000;
+      box-shadow: 0 0 10px #FD3131;
+    }
+    #reset-btn {
+      background-color: #FD3131;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 0 15px #FD3131;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>بازی آیین خواب زدگان - تقسیم نقش‌ها</h1>
+  <form id="player-form">
+    <label for="player-name">نام بازیکن:</label>
+    <input type="text" id="player-name" placeholder="نام را وارد کنید" />
+    <button type="button" id="add-player-btn" disabled>اضافه کردن بازیکن</button>
+
+    <label for="mafia-count">تعداد سایه‌زنان:</label>
+    <input type="number" id="mafia-count" min="1" max="3" value="1" />
+
+    <div id="players-list"></div>
+    <button type="button" id="start-game-btn" disabled>شروع بازی</button>
+  </form>
+
+  <div id="cards-container"></div>
+  <button id="reset-btn">بازنشانی بازی</button>
+
+  <script>
+  const players = [];
+
+  const subRoles = {
+    "مافیاها (سایه‌زنان)": [
+      {
+        name: "چنگال‌سیاه (Blackclaw)",
+        desc: `خرافه: گفته می‌شود چنگال‌سیاه به روح مردگان فرمان می‌دهد و می‌تواند «اثر مرگ» را روی کسی بگذارد؛
+        اثر نامرئی‌ای که جان قربانی را آهسته می‌رباید بدون آنکه خودش از آن باخبر باشد.
+        در بازی: می‌تواند روی یکی اثر مرگ بگذارد، ولی آن فرد ممکن است هنوز زنده بماند یا در دورهای بعد تأثیرش را نشان دهد.`
+      },
+      {
+        name: "دل‌دزد (Heartstealer)",
+        desc: `خرافه: دل‌دزد، موجودی است که روح و احساسات دیگران را دزدیده و آن‌ها را به اسارت می‌برد.
+        در بازی: با قانع کردن یکی در دوئل، امتیاز یا تأثیر او را برای خود می‌دزدد و خودش قوی‌تر می‌شود.`
+      },
+      {
+        name: "تاریک‌خوان (Darkspeaker)",
+        desc: `خرافه: تاریک‌خوان صدای مردگان را می‌شنود و می‌تواند پیام‌های آن‌ها را به زبان زنده‌ها بیاورد.
+        در بازی: در طول بازی می‌تواند جمله‌ای بنویسد که در روز بعد به جای یک بازیکن دیگر خوانده شود و سردرگمی ایجاد کند.`
+      }
+    ],
+    "شهروندها (نورشناسان)": [
+      {
+        name: "سوگندخور (Oathbound)",
+        desc: `خرافه: کسی که سوگند می‌خورد نمی‌تواند دروغ بگوید؛ اگر دروغ بگوید، روحش به خاطر خیانت به عهد، تسلیم مرگ می‌شود.
+        در بازی: اگر دروغ بگوید (بر خلاف قوانین یا نقش‌اش)، از بازی حذف می‌شود.`
+      },
+      {
+        name: "وجدان‌زنده (LivingConscience)",
+        desc: `خرافه: این نقش، صدای وجدان زنده است که می‌تواند گذشته و اسرار دیگران را آشکار کند.
+        در بازی: می‌تواند نقش آخرین فعالیت فعال یک بازیکن را فاش کند.`
+      },
+      {
+        name: "قاضی خون (BloodJudge)",
+        desc: `خرافه: قاضی خون، کسی است که رأی‌های پنهانی و غیرقابل پیش‌بینی می‌دهد و تصمیم‌هایش مانند شمشیر برّنده است.
+        در بازی: رأیش در دوئل‌ها وزن دارد و می‌تواند نتیجه را به نفع یکی تغییر دهد.`
+      }
+    ],
+    "نقش‌های خاکستری (آینه‌های شکسته)": [
+      {
+        name: "خون‌طلب (Bloodseeker)",
+        desc: `خرافه: خون‌طلب کسی است که از همه طرف‌ها آسیب می‌بیند و می‌زند؛ سایه‌ای خونین که دنبال درگیری است.
+        در بازی: به هر دو طرف آسیب می‌زند و باعث آشفتگی در بازی می‌شود.`
+      },
+      {
+        name: "پیمان‌شکن (Betrayer)",
+        desc: `خرافه: پیمان‌شکن کسی است که نه با شهروندان و نه با مافیا هم‌پیمان می‌شود؛ وفادار به خود و سرنوشت خود است.
+        در بازی: اگر تا پایان بازی با هیچ‌کس هم‌پیمان نشود، برنده بازی است.`
+      },
+      {
+        name: "روح‌پنهان (Shade)",
+        desc: `خرافه: روح‌پنهان فقط وقتی زنده می‌ماند که هیچ‌کس به او باور نکند؛ اگر او را باور کنند، تسلیم مرگ خواهد شد.
+        در بازی: وجودش مشکوک و مبهم است و باید با ظرافت رفتار کند.`
+      }
+    ]
+  };
+
+  const playerNameInput = document.getElementById("player-name");
+  const addPlayerBtn = document.getElementById("add-player-btn");
+  const mafiaCountInput = document.getElementById("mafia-count");
+  const startGameBtn = document.getElementById("start-game-btn");
+  const playersList = document.getElementById("players-list");
+  const cardsContainer = document.getElementById("cards-container");
+  const resetBtn = document.getElementById("reset-btn");
+
+  playerNameInput.addEventListener("input", () => {
+    addPlayerBtn.disabled = playerNameInput.value.trim().length === 0;
+  });
+
+  addPlayerBtn.addEventListener("click", () => {
+    const name = playerNameInput.value.trim();
+    if (name && !players.includes(name)) {
+      players.push(name);
+      playerNameInput.value = "";
+      addPlayerBtn.disabled = true;
+      updatePlayerList();
+    }
+  });
+
+  function updatePlayerList() {
+    playersList.textContent = "بازیکنان: " + players.join("، ");
+    startGameBtn.disabled = players.length < 4;
+  }
+
+  startGameBtn.addEventListener("click", () => {
+    const mafiaCount = Math.min(parseInt(mafiaCountInput.value, 10), players.length);
+    const grayCount = Math.max(1, Math.floor(players.length / 4));
+    const citizenCount = players.length - mafiaCount - grayCount;
+
+    let roles = [];
+    roles.push(...Array(mafiaCount).fill("مافیاها (سایه‌زنان)"));
+    roles.push(...Array(grayCount).fill("نقش‌های خاکستری (آینه‌های شکسته)"));
+    roles.push(...Array(citizenCount).fill("شهروندها (نورشناسان)"));
+    roles = shuffle(roles);
+
+    cardsContainer.innerHTML = "";
+    players.forEach((name, i) => {
+      const role = roles[i];
+      const subList = subRoles[role];
+      const sub = subList[Math.floor(Math.random() * subList.length)];
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.textContent = name;
+      card.dataset.locked = "false";
+      card.dataset.role = role;
+      card.dataset.subName = sub.name;
+      card.dataset.subDesc = sub.desc;
+
+      card.addEventListener("click", () => {
+        if (card.dataset.locked === "true") return;
+        showModal(name, role, sub.name, sub.desc, () => {
+          card.classList.add("locked");
+          card.dataset.locked = "true";
+        });
+      });
+      cardsContainer.appendChild(card);
+    });
+
+    resetBtn.style.display = "inline-block";
+  });
+
+  resetBtn.addEventListener("click", () => {
+    location.reload();
+  });
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function showModal(name, role, subName, subDesc, onConfirm) {
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    modal.innerHTML = `
+      <h2>${name}</h2>
+      <p><strong>${role}</strong></p>
+      <p><em>${subName}</em><br>${subDesc}</p>
+      <button>فهمیدم</button>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector("button").addEventListener("click", () => {
+      document.body.removeChild(modal);
+      if (onConfirm) onConfirm();
+    });
+  }
+</script>
+
+</body>
+</html>

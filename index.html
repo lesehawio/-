@@ -21,7 +21,7 @@
       text-shadow: 0 0 8px #FD3131;
     }
     #player-form {
-      background: rgba(255 255 255 / 0.05);
+      background: rgba(255, 255, 255, 0.05);
       border: 2px solid #FD3131;
       border-radius: 20px;
       padding: 20px 30px;
@@ -58,6 +58,7 @@
       cursor: pointer;
       width: 100%;
       box-shadow: 0 0 15px #FD3131;
+      margin-bottom: 10px; /* فاصله بین دکمه‌ها */
     }
     #players-list {
       margin-bottom: 10px;
@@ -131,7 +132,7 @@
       color: #000;
       box-shadow: 0 0 10px #FD3131;
     }
-    #reset-btn {
+    #reset-btn, #shuffle-btn, #remove-player-btn, #remove-one-mafia-btn {
       background-color: #FD3131;
       color: #000;
       border: none;
@@ -141,12 +142,36 @@
       font-size: 1.2rem;
       cursor: pointer;
       box-shadow: 0 0 15px #FD3131;
-      display: none;
+      margin: 5px; /* فاصله بین دکمه‌ها */
+    }
+    #button-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px; /* فاصله بین دکمه‌ها */
+      align-items: center; /* تراز کردن عمودی */
+    }
+    #remove-player-input {
+      width: 120px; /* عرض باکس ورودی */
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #FD3131;
+      background-color: #000;
+      color: #FD3131;
+      font-size: 1rem;
+      margin-right: 10px; /* فاصله از دکمه‌ها */
     }
   </style>
 </head>
 <body>
-  <img src="https://cdn.imgurl.ir/uploads/f830403_ei_1747851456857-removebg-preview.png" alt="لوگوی بازی" style="width: 180px; display: block; margin: 0 auto 20px;" />
+<img 
+  src="https://cdn.imgurl.ir/uploads/d576613_f830403_ei_1747851456857-removebg-preview.png" 
+  alt="لوستر راست" 
+  style="position: absolute; top: 0; right: 20px; width: 200px; height: auto;">
+<img 
+  src="https://cdn.imgurl.ir/uploads/d576613_f830403_ei_1747851456857-removebg-preview.png" 
+  alt="لوستر چپ" 
+  style="position: absolute; top: 0; left: 20px; width: 200px; height: auto;">
+<img src="https://cdn.imgurl.ir/uploads/r725571__________.png" alt="لوگوی بازی" style="width: 180px; display: block; margin: 0 auto 20px;" />
   <h1>بازی آیین خواب زدگان - تقسیم نقش‌ها</h1>
   <form id="player-form">
     <label for="player-name">نام بازیکن:</label>
@@ -161,160 +186,183 @@
   </form>
 
   <div id="cards-container"></div>
-  <button id="reset-btn">بازنشانی بازی</button>
+  <div id="button-container">
+    <input type="text" id="remove-player-input" placeholder="نام بازیکن برای حذف" />
+    <button id="remove-player-btn">حذف بازیکن</button>
+    <button id="remove-one-mafia-btn">حذف یک سایه‌زن</button>
+    <button id="reset-btn">بازنشانی بازی</button>
+    <button id="shuffle-btn" style="display: none;">نقش گردانی مجدد</button>
+  </div>
 
   <script>
-  const players = [];
+    const players = [];
+    const mafiaPlayers = []; // آرایه برای ذخیره سایه‌زن‌ها
 
-  const subRoles = {
-    "مافیاها (سایه‌زنان)": [
-      {
-        name: "چنگال‌سیاه (Blackclaw)",
-        desc: `خرافه: گفته می‌شود چنگال‌سیاه به روح مردگان فرمان می‌دهد و می‌تواند «اثر مرگ» را روی کسی بگذارد؛
-        اثر نامرئی‌ای که جان قربانی را آهسته می‌رباید بدون آنکه خودش از آن باخبر باشد.
-        در بازی: می‌تواند روی یکی اثر مرگ بگذارد، ولی آن فرد ممکن است هنوز زنده بماند یا در دورهای بعد تأثیرش را نشان دهد.`
-      },
-      {
-        name: "دل‌دزد (Heartstealer)",
-        desc: `خرافه: دل‌دزد، موجودی است که روح و احساسات دیگران را دزدیده و آن‌ها را به اسارت می‌برد.
-        در بازی: با قانع کردن یکی در دوئل، امتیاز یا تأثیر او را برای خود می‌دزدد و خودش قوی‌تر می‌شود.`
-      },
-      {
-        name: "تاریک‌خوان (Darkspeaker)",
-        desc: `خرافه: تاریک‌خوان صدای مردگان را می‌شنود و می‌تواند پیام‌های آن‌ها را به زبان زنده‌ها بیاورد.
-        در بازی: در طول بازی می‌تواند جمله‌ای بنویسد که در روز بعد به جای یک بازیکن دیگر خوانده شود و سردرگمی ایجاد کند.`
+    const subRoles = {
+      "سایه‌زنان": [
+        { name: "چنگال‌سیاه", desc: "تو حامل سایه‌ای.کسی نباید بفهمد.حلقه را با کلامت بپیچان، نه با فریاد.خرافه را بکار، شک را پراکنده کن،و بگذار نورشناسان،یکدیگر را بسوزانند.تو قرار نیست پیروز شوی،تو قرار است مسیر را عوض کنی." },
+        { name: "دل‌دزد", desc: "تو حامل سایه‌ای.کسی نباید بفهمد.حلقه را با کلامت بپیچان، نه با فریاد.خرافه را بکار، شک را پراکنده کن،و بگذار نورشناسان،یکدیگر را بسوزانند.تو قرار نیست پیروز شوی،تو قرار است مسیر را عوض کنی." },
+        { name: "تاریک‌خوان", desc: "تو حامل سایه‌ای.کسی نباید بفهمد.حلقه را با کلامت بپیچان، نه با فریاد.خرافه را بکار، شک را پراکنده کن،و بگذار نورشناسان،یکدیگر را بسوزانند.تو قرار نیست پیروز شوی،تو قرار است مسیر را عوض کنی." }
+      ],
+      "نورشناسان": [
+        { name: "سوگندخور", desc: "تو از آنان هستی که هنوز بیدار مانده‌اند.در تاریکی حلقه، صدای خودت را گم نکن.سایه‌زن با واژه‌ها وارد می‌شود، نه با چاقو.به کلمات شک کن، به نگاه‌ها، به سکوت‌ها.فقط با شناخت حقیقت است که می‌توانی زنده بمانی...وگرنه تو هم، یکی از آن‌ها خواهی شد." },
+        { name: "وجدان‌زنده", desc: "تو از آنان هستی که هنوز بیدار مانده‌اند.در تاریکی حلقه، صدای خودت را گم نکن.سایه‌زن با واژه‌ها وارد می‌شود، نه با چاقو.به کلمات شک کن، به نگاه‌ها، به سکوت‌ها.فقط با شناخت حقیقت است که می‌توانی زنده بمانی...وگرنه تو هم، یکی از آن‌ها خواهی شد." },
+        { name: "قاضی خون", desc: "تو از آنان هستی که هنوز بیدار مانده‌اند.در تاریکی حلقه، صدای خودت را گم نکن.سایه‌زن با واژه‌ها وارد می‌شود، نه با چاقو.به کلمات شک کن، به نگاه‌ها، به سکوت‌ها.فقط با شناخت حقیقت است که می‌توانی زنده بمانی...وگرنه تو هم، یکی از آن‌ها خواهی شد." }
+      ],
+      "آینه‌های شکسته": [
+        { name: "خون‌طلب", desc: "تو از جنسِ تردیدی.نه نور، نه سایه.تو آینه‌ای هستی که ترک برداشته…و هرکه درونت را ببیند،خودش را گم می‌کند.مراقب باش—شاید تسخیرت کرده باشند،و شاید هنوز نه.اما اگر روزی بیدار شدیو خودت را نشناختی،بدان بازی تازه شروع شده..." },
+        { name: "پیمان‌شکن", desc: "تو از جنسِ تردیدی.نه نور، نه سایه.تو آینه‌ای هستی که ترک برداشته…و هرکه درونت را ببیند،خودش را گم می‌کند.مراقب باش—شاید تسخیرت کرده باشند،و شاید هنوز نه.اما اگر روزی بیدار شدیو خودت را نشناختی،بدان بازی تازه شروع شده..." },
+        { name: "روح‌پنهان", desc: "تو از جنسِ تردیدی.نه نور، نه سایه.تو آینه‌ای هستی که ترک برداشته…و هرکه درونت را ببیند،خودش را گم می‌کند.مراقب باش—شاید تسخیرت کرده باشند،و شاید هنوز نه.اما اگر روزی بیدار شدیو خودت را نشناختی،بدان بازی تازه شروع شده..." }
+      ]
+    };
+
+    const playerNameInput = document.getElementById("player-name");
+    const addPlayerBtn = document.getElementById("add-player-btn");
+    const mafiaCountInput = document.getElementById("mafia-count");
+    const startGameBtn = document.getElementById("start-game-btn");
+    const playersList = document.getElementById("players-list");
+    const cardsContainer = document.getElementById("cards-container");
+    const resetBtn = document.getElementById("reset-btn");
+    const shuffleBtn = document.getElementById("shuffle-btn");
+    const removePlayerBtn = document.getElementById("remove-player-btn");
+    const removeOneMafiaBtn = document.getElementById("remove-one-mafia-btn");
+
+    playerNameInput.addEventListener("input", () => {
+      addPlayerBtn.disabled = playerNameInput.value.trim().length === 0;
+    });
+
+    addPlayerBtn.addEventListener("click", () => {
+      const name = playerNameInput.value.trim();
+      if (name && !players.includes(name)) {
+        players.push(name);
+        if (players.length <= parseInt(mafiaCountInput.value, 10)) {
+          mafiaPlayers.push(name); // اضافه کردن به آرایه سایه‌زن‌ها
+        }
+        playerNameInput.value = "";
+        addPlayerBtn.disabled = true;
+        updatePlayerList();
       }
-    ],
-    "شهروندها (نورشناسان)": [
-      {
-        name: "سوگندخور (Oathbound)",
-        desc: `خرافه: کسی که سوگند می‌خورد نمی‌تواند دروغ بگوید؛ اگر دروغ بگوید، روحش به خاطر خیانت به عهد، تسلیم مرگ می‌شود.
-        در بازی: اگر دروغ بگوید (بر خلاف قوانین یا نقش‌اش)، از بازی حذف می‌شود.`
-      },
-      {
-        name: "وجدان‌زنده (LivingConscience)",
-        desc: `خرافه: این نقش، صدای وجدان زنده است که می‌تواند گذشته و اسرار دیگران را آشکار کند.
-        در بازی: می‌تواند نقش آخرین فعالیت فعال یک بازیکن را فاش کند.`
-      },
-      {
-        name: "قاضی خون (BloodJudge)",
-        desc: `خرافه: قاضی خون، کسی است که رأی‌های پنهانی و غیرقابل پیش‌بینی می‌دهد و تصمیم‌هایش مانند شمشیر برّنده است.
-        در بازی: رأیش در دوئل‌ها وزن دارد و می‌تواند نتیجه را به نفع یکی تغییر دهد.`
-      }
-    ],
-    "نقش‌های خاکستری (آینه‌های شکسته)": [
-      {
-        name: "خون‌طلب (Bloodseeker)",
-        desc: `خرافه: خون‌طلب کسی است که از همه طرف‌ها آسیب می‌بیند و می‌زند؛ سایه‌ای خونین که دنبال درگیری است.
-        در بازی: به هر دو طرف آسیب می‌زند و باعث آشفتگی در بازی می‌شود.`
-      },
-      {
-        name: "پیمان‌شکن (Betrayer)",
-        desc: `خرافه: پیمان‌شکن کسی است که نه با شهروندان و نه با مافیا هم‌پیمان می‌شود؛ وفادار به خود و سرنوشت خود است.
-        در بازی: اگر تا پایان بازی با هیچ‌کس هم‌پیمان نشود، برنده بازی است.`
-      },
-      {
-        name: "روح‌پنهان (Shade)",
-        desc: `خرافه: روح‌پنهان فقط وقتی زنده می‌ماند که هیچ‌کس به او باور نکند؛ اگر او را باور کنند، تسلیم مرگ خواهد شد.
-        در بازی: وجودش مشکوک و مبهم است و باید با ظرافت رفتار کند.`
-      }
-    ]
-  };
+    });
 
-  const playerNameInput = document.getElementById("player-name");
-  const addPlayerBtn = document.getElementById("add-player-btn");
-  const mafiaCountInput = document.getElementById("mafia-count");
-  const startGameBtn = document.getElementById("start-game-btn");
-  const playersList = document.getElementById("players-list");
-  const cardsContainer = document.getElementById("cards-container");
-  const resetBtn = document.getElementById("reset-btn");
-
-  playerNameInput.addEventListener("input", () => {
-    addPlayerBtn.disabled = playerNameInput.value.trim().length === 0;
-  });
-
-  addPlayerBtn.addEventListener("click", () => {
-    const name = playerNameInput.value.trim();
-    if (name && !players.includes(name)) {
-      players.push(name);
-      playerNameInput.value = "";
-      addPlayerBtn.disabled = true;
-      updatePlayerList();
+    function updatePlayerList() {
+      playersList.textContent = "بازیکنان: " + players.join("، ");
+      startGameBtn.disabled = players.length < 4;
+      shuffleBtn.style.display = players.length > 0 ? "inline-block" : "none";
+      removePlayerBtn.style.display = players.length > 0 ? "inline-block" : "none";
+      removeOneMafiaBtn.style.display = mafiaPlayers.length > 0 ? "inline-block" : "none";
     }
-  });
 
-  function updatePlayerList() {
-    playersList.textContent = "بازیکنان: " + players.join("، ");
-    startGameBtn.disabled = players.length < 4;
-  }
+    startGameBtn.addEventListener("click", () => {
+      assignRoles();
+      resetBtn.style.display = "inline-block";
+    });
 
-  startGameBtn.addEventListener("click", () => {
-    const mafiaCount = Math.min(parseInt(mafiaCountInput.value, 10), players.length);
-    const grayCount = Math.max(1, Math.floor(players.length / 4));
-    const citizenCount = players.length - mafiaCount - grayCount;
+    shuffleBtn.addEventListener("click", () => {
+      assignRoles();
+    });
 
-    let roles = [];
-    roles.push(...Array(mafiaCount).fill("مافیاها (سایه‌زنان)"));
-    roles.push(...Array(grayCount).fill("نقش‌های خاکستری (آینه‌های شکسته)"));
-    roles.push(...Array(citizenCount).fill("شهروندها (نورشناسان)"));
-    roles = shuffle(roles);
+    removePlayerBtn.addEventListener("click", () => {
+      const name = removePlayerInput.value.trim();
+      if (name && players.includes(name)) {
+        // حذف بازیکن
+        players.splice(players.indexOf(name), 1);
+        // اگر بازیکن حذف شده سایه‌زن بود، آن را از آرایه سایه‌زن‌ها نیز حذف کنیم
+        const mafiaIndex = mafiaPlayers.indexOf(name);
+        if (mafiaIndex !== -1) {
+          mafiaPlayers.splice(mafiaIndex, 1);
+        }
+        removePlayerInput.value = "";
+        updatePlayerList();
+      } else {
+        alert("بازیکن مورد نظر در لیست وجود ندارد.");
+      }
+    });
 
-    cardsContainer.innerHTML = "";
-    players.forEach((name, i) => {
-      const role = roles[i];
-      const subList = subRoles[role];
-      const sub = subList[Math.floor(Math.random() * subList.length)];
+    removeOneMafiaBtn.addEventListener("click", () => {
+      if (mafiaPlayers.length > 0) {
+        const removedMafia = mafiaPlayers[Math.floor(Math.random() * mafiaPlayers.length)];
+        const newRole = Math.random() < 0.5 ? "نورشناسان" : "آینه‌های شکسته"; // انتخاب نقش جدید
+        const subList = subRoles[newRole];
+        const sub = subList[Math.floor(Math.random() * subList.length)];
 
-      const card = document.createElement("div");
-      card.className = "card";
-      card.textContent = name;
-      card.dataset.locked = "false";
-      card.dataset.role = role;
-      card.dataset.subName = sub.name;
-      card.dataset.subDesc = sub.desc;
+        // تغییر نقش سایه‌زن به نقش جدید
+        const playerIndex = players.indexOf(removedMafia);
+        players[playerIndex] = `${removedMafia} (${newRole})`; // تغییر نام بازیکن به همراه نقش جدید
 
-      card.addEventListener("click", () => {
-        if (card.dataset.locked === "true") return;
-        showModal(name, role, sub.name, sub.desc, () => {
-          card.classList.add("locked");
-          card.dataset.locked = "true";
+        // حذف سایه‌زن از لیست سایه‌زن‌ها
+        mafiaPlayers.splice(mafiaPlayers.indexOf(removedMafia), 1);
+
+        alert(`${removedMafia} به ${newRole} تغییر نقش داد!`);
+        updatePlayerList();
+      } else {
+        alert("هیچ سایه‌زنی برای حذف وجود ندارد.");
+      }
+    });
+
+    function assignRoles() {
+      const mafiaCount = Math.min(parseInt(mafiaCountInput.value, 10), players.length);
+      const grayCount = Math.max(1, Math.floor(players.length / 4));
+      const citizenCount = players.length - mafiaCount - grayCount;
+
+      let roles = [];
+      roles.push(...Array(mafiaCount).fill("سایه‌زنان"));
+      roles.push(...Array(grayCount).fill("آینه‌های شکسته"));
+      roles.push(...Array(citizenCount).fill("نورشناسان"));
+      roles = shuffle(roles);
+
+      cardsContainer.innerHTML = "";
+      players.forEach((name, i) => {
+        const role = roles[i];
+        const subList = subRoles[role];
+        const sub = subList[Math.floor(Math.random() * subList.length)];
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.textContent = name;
+        card.dataset.locked = "false";
+        card.dataset.role = role;
+        card.dataset.subName = sub.name;
+        card.dataset.subDesc = sub.desc;
+
+        card.addEventListener("click", () => {
+          if (card.dataset.locked === "true") return;
+          showModal(name, role, sub.name, sub.desc, () => {
+            card.classList.add("locked");
+            card.dataset.locked = "true";
+          });
         });
+        cardsContainer.appendChild(card);
       });
-      cardsContainer.appendChild(card);
-    });
-
-    resetBtn.style.display = "inline-block";
-  });
-
-  resetBtn.addEventListener("click", () => {
-    location.reload();
-  });
-
-  function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
     }
-    return array;
-  }
 
-  function showModal(name, role, subName, subDesc, onConfirm) {
-    const modal = document.createElement("div");
-    modal.className = "modal";
-    modal.innerHTML = `
-      <h2>${name}</h2>
-      <p><strong>${role}</strong></p>
-      <p><em>${subName}</em><br>${subDesc}</p>
-      <button>فهمیدم</button>
-    `;
-    document.body.appendChild(modal);
-
-    modal.querySelector("button").addEventListener("click", () => {
-      document.body.removeChild(modal);
-      if (onConfirm) onConfirm();
+    resetBtn.addEventListener("click", () => {
+      location.reload();
     });
-  }
-</script>
 
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function showModal(name, role, subName, subDesc, onConfirm) {
+      const modal = document.createElement("div");
+      modal.className = "modal";
+      modal.innerHTML = `
+        <h2>${name}</h2>
+        <p><strong>${role}</strong></p>
+        <p><em>${subName}</em><br>${subDesc}</p>
+        <button>فهمیدم</button>
+      `;
+      document.body.appendChild(modal);
+
+      modal.querySelector("button").addEventListener("click", () => {
+        document.body.removeChild(modal);
+        if (onConfirm) onConfirm();
+      });
+    }
+  </script>
 </body>
 </html>

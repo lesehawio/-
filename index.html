@@ -259,7 +259,7 @@
     });
 
     function updatePlayerList() {
-      playersList.textContent = "بازیکنان: " + players.join("، ");
+      playersList.textContent = "روستاییان: " + players.join("، ");
       startGameBtn.disabled = players.length < 4;
       shuffleBtn.style.display = players.length > 0 ? "inline-block" : "none";
     }
@@ -270,8 +270,10 @@
     });
 
     shuffleBtn.addEventListener("click", () => {
-      assignRoles();
+    showMysticMessage("🌫️ نقش‌ها جان تازه گرفتند... اما حقیقت پنهان‌تر از پیش شد.");
+    assignRoles();
     });
+
 
     function assignRoles() {
       const mafiaCount = Math.min(parseInt(mafiaCountInput.value, 10), players.length);
@@ -337,6 +339,62 @@
         if (onConfirm) onConfirm();
       });
     }
+    
+function showMysticMessage(message) {
+  const msgBox = document.createElement("div");
+  msgBox.textContent = message;
+  msgBox.style.position = "fixed";
+  msgBox.style.top = "50%";
+  msgBox.style.left = "50%";
+  msgBox.style.transform = "translate(-50%, -50%)";
+  msgBox.style.background = "#111";
+  msgBox.style.color = "#FF9999";
+  msgBox.style.border = "2px solid #FD3131";
+  msgBox.style.borderRadius = "12px";
+  msgBox.style.padding = "20px 30px";
+  msgBox.style.boxShadow = "0 0 30px #FD3131";
+  msgBox.style.zIndex = "9999";
+  msgBox.style.fontSize = "1.1rem";
+  msgBox.style.textAlign = "center";
+
+  document.body.appendChild(msgBox);
+
+  setTimeout(() => {
+    document.body.removeChild(msgBox);
+  }, 3000); // نمایش برای ۳ ثانیه
+  
+}
+
+startGameBtn.addEventListener("click", () => {
+  showMysticMessage("🕯️ شعله‌ها برافروخته شد، آیین آغاز گشت...");
+  assignRoles();
+  resetBtn.style.display = "inline-block";
+});
+
+removePlayerBtn.addEventListener("click", () => {
+  const nameToRemove = removePlayerInput.value.trim();
+  const index = players.indexOf(nameToRemove);
+  if (index > -1) {
+    players.splice(index, 1);
+    if (mafiaPlayers.includes(nameToRemove)) {
+      mafiaPlayers.splice(mafiaPlayers.indexOf(nameToRemove), 1);
+    }
+    removePlayerInput.value = "";
+    updatePlayerList();
+    showMysticMessage(`🌒 ${nameToRemove} از حلقه بیرون شد. آتش لرزید.`);
+  } else {
+    alert("از حلقه بیرون شد. آتش لرزید");
+  }
+});
+
+resetBtn.addEventListener("click", () => {
+  showMysticMessage("🔁 آتش خاموش شد، حلقه از نو شکل می‌گیرد...");
+  setTimeout(() => {
+    location.reload();
+  }, 1500); // کمی تأخیر برای نمایش پیام قبل از ری‌لود
+});
+
+
   </script>
 </body>
 </html>
